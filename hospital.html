@@ -1,0 +1,629 @@
+<!Doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Hospital Patient Management — Pro</title>
+
+  <!-- Bootstrap CSS -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+
+  <!-- Font Awesome -->
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
+
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+
+  <style>
+    :root{
+      --bg:#f3f6fb; --muted:#6c757d; --accent:#0d6efd; --card:#ffffff; --danger:#dc3545;
+    }
+    *{box-sizing:border-box}
+    html,body{height:100%;margin:0;font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,Arial}
+    body{background:linear-gradient(180deg,#eef6ff 0,#f3f6fb 50%,#fff 100%);color:#0b1a2b}
+    .sidebar{min-height:100vh;border-right:1px solid rgba(13,110,253,0.06);padding:20px;background:linear-gradient(180deg,rgba(13,110,253,0.03),transparent)}
+    .logo{width:52px;height:52px;border-radius:10px;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#c82333,#6610f2);color:#fff;font-weight:800}
+    .nav-link{color:#0b1a2b;font-weight:600;border-radius:8px;padding:10px}
+    .nav-link.active{background:rgba(13,110,253,0.08);color:var(--accent)}
+    main{padding:28px}
+    .topbar{display:flex;justify-content:space-between;align-items:center;margin-bottom:22px;gap:12px}
+    .card-ghost{background:linear-gradient(180deg,rgba(255,255,255,0.95),rgba(255,255,255,0.88));border-radius:14px;border:1px solid rgba(11,26,43,0.04);padding:16px;box-shadow:0 6px 24px rgba(11,26,43,0.04)}
+    .table-photo{width:48px;height:48px;object-fit:cover;border-radius:8px}
+    .dropzone{border:2px dashed rgba(11,26,43,0.06);padding:14px;border-radius:10px;text-align:center;background:linear-gradient(180deg,rgba(255,255,255,0.6),transparent)}
+    .small-muted{color:var(--muted);font-size:0.9rem}
+    .dark-mode{background:#071025;color:#dbeafe}
+    .dark-mode .sidebar{background:linear-gradient(180deg,rgba(255,255,255,0.02),transparent);border-right:1px solid rgba(255,255,255,0.03)}
+    .dark-mode .card-ghost{background:linear-gradient(180deg,rgba(10,20,35,0.7),rgba(10,20,35,0.55));border-color:rgba(255,255,255,0.03);color:#dbeafe;box-shadow:none}
+    @media (max-width:992px){.sidebar{min-height:auto}}
+  </style>
+</head>
+<body>
+  <div class="container-fluid p-0">
+    <div class="row g-0">
+      <!-- Sidebar -->
+      <aside class="col-lg-2 sidebar d-flex flex-column">
+        <div class="d-flex align-items-center mb-3">
+          <div class="logo me-2">H+</div>
+          <div>
+            <div style="font-weight:800">Hospital Pro</div>
+            <div class="small-muted">Patient Management</div>
+          </div>
+        </div>
+
+        <nav class="nav flex-column mb-3">
+          <a class="nav-link active" data-target="dashboard" href="#"> <i class="fa-solid fa-chart-pie me-2"></i> Dashboard</a>
+          <a class="nav-link" data-target="patients" href="#"> <i class="fa-solid fa-user-injured me-2"></i> Patients</a>
+          <a class="nav-link" data-target="print" href="#"> <i class="fa-solid fa-print me-2"></i> Print List</a>
+          <a class="nav-link" data-target="reports" href="#"> <i class="fa-solid fa-file-lines me-2"></i> Reports</a>
+          <a class="nav-link mt-2" data-target="settings" href="#"> <i class="fa-solid fa-gear me-2"></i> Settings</a>
+        </nav>
+
+        <div class="mt-auto">
+          <div class="small-muted">Backup</div>
+          <div class="d-grid gap-2 mt-2">
+            <button id="exportJsonBtn" class="btn btn-outline-primary btn-sm"><i class="fa-regular fa-file-arrow-down me-2"></i> Export JSON</button>
+            <button id="exportCsvBtn" class="btn btn-outline-secondary btn-sm"><i class="fa-regular fa-file-csv me-2"></i> Export CSV</button>
+            <input id="importFile" type="file" accept=".json,.csv" style="display:none">
+            <button id="importBtn" class="btn btn-outline-success btn-sm"><i class="fa-solid fa-file-import me-2"></i> Import</button>
+          </div>
+
+          <div class="small-muted mt-3">Theme</div>
+          <div class="form-check form-switch mt-2">
+            <input class="form-check-input" type="checkbox" id="darkModeToggle">
+            <label class="form-check-label small-muted" for="darkModeToggle">Dark Mode</label>
+          </div>
+        </div>
+      </aside>
+
+      <!-- Main -->
+      <main class="col-lg-10">
+        <div class="container-fluid p-4">
+          <!-- Topbar -->
+          <div class="topbar">
+            <div>
+              <h4 id="pageTitle" class="mb-0">Dashboard</h4>
+              <div class="small-muted">Manage patient records — no server required.</div>
+            </div>
+
+            <div class="d-flex align-items-center gap-2">
+              <div class="input-group" style="min-width:280px;">
+                <span class="input-group-text bg-white"><i class="fa-solid fa-magnifying-glass"></i></span>
+                <input id="globalSearch" type="search" class="form-control form-control-sm" placeholder="Search name, ID, disease...">
+              </div>
+              <button id="addNewBtn" class="btn btn-primary btn-sm"><i class="fa-solid fa-plus me-1"></i> Add Patient</button>
+            </div>
+          </div>
+
+          <!-- Views: dashboard / patients / print / reports / settings -->
+          <div id="view-dashboard" class="view">
+            <div class="row g-3">
+              <div class="col-md-4">
+                <div class="card-ghost">
+                  <div class="d-flex justify-content-between">
+                    <div><div class="small-muted">Total Patients</div><div class="h4" id="kTotal">0</div></div>
+                    <div class="text-end"><i class="fa-solid fa-user-injured fs-2 text-secondary"></i></div>
+                  </div>
+                  <div class="small-muted mt-2">Registered patient records</div>
+                </div>
+              </div>
+
+              <div class="col-md-4">
+                <div class="card-ghost">
+                  <div class="d-flex justify-content-between">
+                    <div><div class="small-muted">Average Age</div><div class="h4" id="kAvgAge">0</div></div>
+                    <div class="text-end"><i class="fa-solid fa-calendar-days fs-2 text-success"></i></div>
+                  </div>
+                  <div class="small-muted mt-2">Average patient age</div>
+                </div>
+              </div>
+
+              <div class="col-md-4">
+                <div class="card-ghost">
+                  <div class="d-flex justify-content-between">
+                    <div><div class="small-muted">Unique Rooms</div><div class="h4" id="kRooms">0</div></div>
+                    <div class="text-end"><i class="fa-solid fa-bed fs-2 text-warning"></i></div>
+                  </div>
+                  <div class="small-muted mt-2">Distinct room numbers</div>
+                </div>
+              </div>
+
+              <div class="col-12">
+                <div class="card-ghost p-3">
+                  <div class="d-flex justify-content-between align-items-center mb-2">
+                    <div><h5 class="mb-0">Disease Distribution</h5><div class="small-muted">Number of patients per disease</div></div>
+                    <div class="small-muted">Live</div>
+                  </div>
+                  <canvas id="diseaseChart" height="120"></canvas>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div id="view-patients" class="view" style="display:none">
+            <div class="card-ghost p-3 mb-3">
+              <div class="row g-2">
+                <div class="col-md-3">
+                  <label class="small-muted">Filter by Disease</label>
+                  <input id="filterDisease" class="form-control form-control-sm" placeholder="e.g. Fever">
+                </div>
+                <div class="col-md-3">
+                  <label class="small-muted">Min Age</label>
+                  <input id="filterMinAge" type="number" min="0" class="form-control form-control-sm" placeholder="0">
+                </div>
+                <div class="col-md-3">
+                  <label class="small-muted">Room</label>
+                  <input id="filterRoom" class="form-control form-control-sm" placeholder="Room #">
+                </div>
+                <div class="col-md-3 d-flex align-items-end gap-2">
+                  <button id="applyFilters" class="btn btn-outline-primary btn-sm w-50">Apply</button>
+                  <button id="resetFilters" class="btn btn-outline-secondary btn-sm w-50">Reset</button>
+                </div>
+              </div>
+            </div>
+
+            <div class="card-ghost p-3 mb-3">
+              <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                  <thead class="table-light">
+                    <tr><th>Photo</th><th>ID</th><th>Name</th><th>Age</th><th>Disease</th><th>Room</th><th>Actions</th></tr>
+                  </thead>
+                  <tbody id="patientsTableBody"></tbody>
+                </table>
+              </div>
+
+              <div class="d-flex justify-content-between align-items-center mt-3">
+                <div class="small-muted">Showing <span id="shownCount">0</span> of <span id="totalCount">0</span></div>
+                <nav><ul id="paginationUL" class="pagination pagination-sm mb-0"></ul></nav>
+              </div>
+            </div>
+
+            <div class="card-ghost p-3">
+              <div class="row g-3">
+                <div class="col-md-6">
+                  <h6>Bulk CSV Upload</h6>
+                  <div id="csvDrop" class="dropzone mb-2">
+                    <div class="small-muted">Drag & drop CSV or <button id="csvSelect" class="btn btn-sm btn-outline-primary">Select File</button></div>
+                    <div class="small-muted mt-2">Columns: id,name,age,disease,room,notes,photo(base64)</div>
+                  </div>
+                  <input id="csvFile" type="file" accept=".csv" style="display:none">
+                  <button id="processCsv" class="btn btn-sm btn-outline-success">Import CSV</button>
+                </div>
+
+                <div class="col-md-6">
+                  <h6>Actions</h6>
+                  <div class="d-flex gap-2">
+                    <button id="clearAllBtn" class="btn btn-outline-danger"><i class="fa-solid fa-trash me-1"></i> Clear All</button>
+                    <button id="printListBtn" class="btn btn-outline-secondary"><i class="fa-solid fa-print me-1"></i> Print List</button>
+                  </div>
+                  <div class="small-muted mt-3">Tip: export before clearing large datasets.</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div id="view-print" class="view" style="display:none">
+            <div class="card-ghost p-3">
+              <div class="d-flex justify-content-between align-items-center">
+                <div><h5 class="mb-0">Printable Patient List</h5><div class="small-muted">Optimized for print</div></div>
+                <div><button id="printNowBtn" class="btn btn-primary btn-sm"><i class="fa-solid fa-print me-1"></i> Print</button></div>
+              </div>
+              <hr>
+              <div id="printContents"></div>
+            </div>
+          </div>
+
+          <div id="view-reports" class="view" style="display:none">
+            <div class="card-ghost p-3">
+              <h5>Top Diseases</h5>
+              <div id="reportsArea"></div>
+            </div>
+          </div>
+
+          <div id="view-settings" class="view" style="display:none">
+            <div class="card-ghost p-3">
+              <h5>About & Settings</h5>
+              <p class="small-muted">Data stored in browser <code>localStorage</code>. Export/Import to move data. For cross-device sync, connect a backend (Firebase/Node).</p>
+              <hr>
+              <p class="small-muted mb-0">Author: Talha Muneer</p>
+            </div>
+          </div>
+
+        </div> <!-- container -->
+      </main>
+    </div>
+  </div>
+
+  <!-- Patient Modal -->
+  <div class="modal fade" id="patientModal" tabindex="-1">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+      <div class="modal-content">
+        <form id="patientForm" class="needs-validation" novalidate>
+          <div class="modal-header">
+            <h5 id="patientModalTitle" class="modal-title">Add Patient</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+          </div>
+
+          <div class="modal-body">
+            <div class="row g-3">
+              <div class="col-md-4">
+                <label class="form-label">Patient ID</label>
+                <input id="formId" class="form-control">
+              </div>
+              <div class="col-md-8">
+                <label class="form-label">Full Name</label>
+                <input id="formName" class="form-control" required>
+              </div>
+
+              <div class="col-md-3">
+                <label class="form-label">Age</label>
+                <input id="formAge" type="number" min="0" class="form-control" value="30">
+              </div>
+              <div class="col-md-5">
+                <label class="form-label">Disease / Diagnosis</label>
+                <input id="formDisease" class="form-control">
+              </div>
+              <div class="col-md-4">
+                <label class="form-label">Room No.</label>
+                <input id="formRoom" class="form-control">
+              </div>
+
+              <div class="col-md-4">
+                <label class="form-label">Photo (optional)</label>
+                <input id="photoInput" type="file" accept="image/*" class="form-control form-control-sm">
+                <div class="small-muted mt-1">Recommended ≤ 2.5MB</div>
+              </div>
+              <div class="col-md-2">
+                <label class="form-label">Preview</label>
+                <div><img id="photoPreview" alt="" class="img-fluid rounded" style="max-height:96px"></div>
+              </div>
+
+              <div class="col-12">
+                <label class="form-label">Notes</label>
+                <textarea id="formNotes" class="form-control" rows="2"></textarea>
+              </div>
+            </div>
+          </div>
+
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+            <button id="savePatientBtn" type="submit" class="btn btn-primary">Save Patient</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- Bootstrap JS bundle -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+
+  <script>
+  (function(){
+    // helpers
+    const $ = s => document.querySelector(s);
+    const $$ = s => Array.from(document.querySelectorAll(s));
+    const STORE_KEY = 'hp_patients_v1';
+    const PAGE_SIZE = 8;
+
+    function loadStore(){ try { return JSON.parse(localStorage.getItem(STORE_KEY)) || []; } catch { return []; } }
+    function saveStore(data){ localStorage.setItem(STORE_KEY, JSON.stringify(data)); }
+
+    let patients = loadStore();
+    let currentPage = 1;
+    let lastSearch = '';
+    let diseaseChart = null;
+
+    const patientModalEl = document.getElementById('patientModal');
+    const patientModal = new bootstrap.Modal(patientModalEl, { backdrop: 'static' });
+
+    // basic utilities
+    function uid(){ return 'P-' + Math.random().toString(36).slice(2,9).toUpperCase(); }
+    function todayISO(){ return new Date().toISOString().split('T')[0]; }
+    function escapeHtml(s){ if(!s) return ''; return String(s).replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('"','&quot;').replaceAll("'",'&#039;'); }
+
+    // View switching
+    function showView(name){
+      $$('.view').forEach(v => v.style.display = 'none');
+      const v = $('#view-' + name);
+      if(v) v.style.display = '';
+      $$('.nav-link').forEach(n => n.classList.toggle('active', n.dataset.target === name));
+      $('#pageTitle').textContent = name.charAt(0).toUpperCase() + name.slice(1);
+      if(name === 'patients') renderPatients(1);
+      if(name === 'dashboard') renderDashboard();
+      if(name === 'print') renderPrint();
+      if(name === 'reports') renderReports();
+    }
+    $$('.nav-link').forEach(n => n.addEventListener('click', e => { e.preventDefault(); showView(n.dataset.target); }));
+
+    // Dark mode
+    const darkToggle = $('#darkModeToggle');
+    function setDarkMode(on){ document.documentElement.classList.toggle('dark-mode', on); if(on) localStorage.setItem('hp_dark','1'); else localStorage.removeItem('hp_dark'); }
+    darkToggle.addEventListener('change', ()=> setDarkMode(darkToggle.checked));
+    if(localStorage.getItem('hp_dark')){ darkToggle.checked = true; setDarkMode(true); }
+
+    // Modal/form
+    $('#addNewBtn').addEventListener('click', ()=> {
+      $('#patientModalTitle').textContent = 'Add Patient';
+      $('#patientForm').reset();
+      $('#photoPreview').src = '';
+      delete $('#photoPreview').dataset.base64;
+      patientModal.show();
+    });
+
+    $('#photoInput').addEventListener('change', async (e)=> {
+      const f = e.target.files[0];
+      if(!f) return;
+      if(f.size > 2500000){ alert('Use images under 2.5MB'); return; }
+      const b64 = await toBase64(f);
+      $('#photoPreview').src = b64;
+      $('#photoPreview').dataset.base64 = b64;
+    });
+
+    function toBase64(file){ return new Promise((res, rej)=>{ const r = new FileReader(); r.onload = ()=> res(r.result); r.onerror = rej; r.readAsDataURL(file); }); }
+
+    // form submit
+    $('#patientForm').addEventListener('submit', (ev)=>{
+      ev.preventDefault();
+      const id = $('#formId').value.trim() || uid();
+      const name = $('#formName').value.trim();
+      if(!name){ alert('Name is required'); return; }
+      const age = Math.max(0, parseInt($('#formAge').value || 0));
+      const disease = $('#formDisease').value.trim();
+      const room = $('#formRoom').value.trim();
+      const notes = $('#formNotes').value.trim();
+      const photo = $('#photoPreview').dataset.base64 || '';
+
+      const entry = { id, name, age, disease, room, notes, photo, added: todayISO() };
+      const idx = patients.findIndex(p => p.id === id);
+      if(idx >= 0) patients[idx] = entry; else patients.push(entry);
+      saveStore(patients);
+      patientModal.hide();
+      renderPatients(currentPage);
+      renderDashboard();
+    });
+
+    // render patients list with filters & pagination
+    function getFilteredPatients(){
+      const q = lastSearch.trim().toLowerCase();
+      const diseaseFilter = $('#filterDisease').value.trim().toLowerCase();
+      const minAge = $('#filterMinAge').value === '' ? -Infinity : Number($('#filterMinAge').value);
+      const roomFilter = $('#filterRoom').value.trim().toLowerCase();
+
+      return patients.filter(p => {
+        const matchesSearch = q ? (p.name + ' ' + p.id + ' ' + (p.disease||'')).toLowerCase().includes(q) : true;
+        const diseaseOk = diseaseFilter ? (p.disease || '').toLowerCase().includes(diseaseFilter) : true;
+        const ageOk = (p.age || 0) >= minAge;
+        const roomOk = roomFilter ? (p.room || '').toLowerCase().includes(roomFilter) : true;
+        return matchesSearch && diseaseOk && ageOk && roomOk;
+      }).sort((a,b) => a.name.localeCompare(b.name));
+    }
+
+    function renderPatients(page = 1){
+      currentPage = page;
+      const all = getFilteredPatients();
+      const start = (page - 1) * PAGE_SIZE;
+      const pageItems = all.slice(start, start + PAGE_SIZE);
+
+      const tbody = $('#patientsTableBody');
+      tbody.innerHTML = '';
+      for(const p of pageItems){
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td>${p.photo ? `<img src="${p.photo}" class="table-photo">` : '<div class="table-photo bg-light border d-flex align-items-center justify-content-center"><i class="fa-solid fa-user-injured"></i></div>'}</td>
+          <td><strong>${escapeHtml(p.id)}</strong></td>
+          <td>${escapeHtml(p.name)}</td>
+          <td>${Number(p.age)}</td>
+          <td>${escapeHtml(p.disease || '')}</td>
+          <td>${escapeHtml(p.room || '')}</td>
+          <td>
+            <button class="btn btn-sm btn-primary me-1" data-edit="${p.id}"><i class="fa-solid fa-pen-to-square"></i></button>
+            <button class="btn btn-sm btn-danger" data-del="${p.id}"><i class="fa-solid fa-trash"></i></button>
+          </td>`;
+        tbody.appendChild(tr);
+      }
+
+      // attach actions
+      tbody.querySelectorAll('[data-edit]').forEach(btn => btn.addEventListener('click', ()=>{
+        const id = btn.dataset.edit;
+        const item = patients.find(x => x.id === id);
+        if(!item) return;
+        $('#patientModalTitle').textContent = 'Edit Patient';
+        $('#formId').value = item.id;
+        $('#formName').value = item.name;
+        $('#formAge').value = item.age;
+        $('#formDisease').value = item.disease;
+        $('#formRoom').value = item.room;
+        $('#formNotes').value = item.notes || '';
+        $('#photoPreview').src = item.photo || '';
+        $('#photoPreview').dataset.base64 = item.photo || '';
+        patientModal.show();
+      }));
+
+      tbody.querySelectorAll('[data-del]').forEach(btn => btn.addEventListener('click', ()=>{
+        const id = btn.dataset.del;
+        if(!confirm('Delete this patient?')) return;
+        patients = patients.filter(p => p.id !== id);
+        saveStore(patients);
+        renderPatients(currentPage);
+        renderDashboard();
+      }));
+
+      $('#totalCount').textContent = patients.length;
+      $('#shownCount').textContent = Math.min(all.length, PAGE_SIZE);
+      renderPagination(all.length, page);
+    }
+
+    function renderPagination(totalItems, page){
+      const totalPages = Math.max(1, Math.ceil(totalItems / PAGE_SIZE));
+      const ul = $('#paginationUL');
+      ul.innerHTML = '';
+      for(let p = 1; p <= totalPages; p++){
+        const li = document.createElement('li');
+        li.className = 'page-item ' + (p === page ? 'active' : '');
+        li.innerHTML = `<a class="page-link" href="#">${p}</a>`;
+        li.addEventListener('click', e => { e.preventDefault(); renderPatients(p); });
+        ul.appendChild(li);
+      }
+    }
+
+    // dashboard chart & metrics
+    function renderDashboard(){
+      $('#kTotal').textContent = patients.length;
+      const avgAge = patients.length ? Math.round(patients.reduce((s,p)=>s+(p.age||0),0) / patients.length) : 0;
+      $('#kAvgAge').textContent = avgAge;
+      $('#kRooms').textContent = new Set(patients.map(p => p.room)).size;
+
+      const counts = {};
+      patients.forEach(p => { const d = p.disease || 'Unknown'; counts[d] = (counts[d] || 0) + 1; });
+      const labels = Object.keys(counts);
+      const data = Object.values(counts);
+
+      if(diseaseChart) diseaseChart.destroy();
+      const ctx = document.getElementById('diseaseChart').getContext('2d');
+      diseaseChart = new Chart(ctx, {
+        type: 'doughnut',
+        data: { labels, datasets: [{ data, backgroundColor: generateColors(labels.length) }] },
+        options: { plugins: { legend: { position: 'bottom' } } }
+      });
+    }
+    function generateColors(n){
+      const palette = ['#c82333','#0d6efd','#20c997','#fd7e14','#6f42c1','#198754','#6610f2','#ffc107'];
+      const out = []; for(let i=0;i<n;i++) out.push(palette[i % palette.length]); return out;
+    }
+
+    // print & reports
+    function renderPrint(){
+      const el = $('#printContents'); el.innerHTML = '';
+      if(!patients.length){ el.innerHTML = '<p class="small-muted">No patients to print.</p>'; return; }
+      const container = document.createElement('div'); container.className = 'row g-3';
+      patients.slice().sort((a,b)=>a.name.localeCompare(b.name)).forEach(p => {
+        const col = document.createElement('div'); col.className = 'col-md-6';
+        col.innerHTML = `
+          <div class="d-flex gap-3 align-items-start p-2 border rounded">
+            <div style="width:72px;flex-shrink:0">${p.photo ? `<img src="${p.photo}" style="width:72px;height:72px;object-fit:cover;border-radius:6px">` : `<div style="width:72px;height:72px;background:#f0f0f0;border-radius:6px;display:flex;align-items:center;justify-content:center"><i class="fa-solid fa-user-injured"></i></div>`}</div>
+            <div>
+              <div class="fw-bold">${escapeHtml(p.name)}</div>
+              <div class="small-muted">ID: ${escapeHtml(p.id)} • Age: ${p.age} • Room: ${escapeHtml(p.room)}</div>
+              <div class="mt-1">${escapeHtml(p.disease || '')} • ${escapeHtml(p.notes || '')}</div>
+            </div>
+          </div>`;
+        container.appendChild(col);
+      });
+      el.appendChild(container);
+    }
+
+    function renderReports(){
+      $('#reportsArea').innerHTML = '';
+      const byDisease = {};
+      patients.forEach(p => byDisease[p.disease || 'Unknown'] = (byDisease[p.disease || 'Unknown'] || 0) + 1);
+      const list = Object.entries(byDisease).sort((a,b)=>b[1]-a[1]).slice(0,10);
+      const ul = document.createElement('ul'); ul.className = 'list-group';
+      list.forEach(([d,c]) => {
+        const li = document.createElement('li'); li.className = 'list-group-item d-flex justify-content-between align-items-center';
+        li.innerHTML = `<div>${escapeHtml(d)}</div><span class="badge bg-primary rounded-pill">${c}</span>`;
+        ul.appendChild(li);
+      });
+      $('#reportsArea').appendChild(ul);
+    }
+
+    // CSV parsing / import / drag & drop
+    function csvToJSON(csvText){
+      const lines = csvText.split(/\r?\n/).filter(Boolean);
+      if(!lines.length) return [];
+      const headers = lines.shift().split(',').map(h => h.trim());
+      return lines.map(line => {
+        const parts = parseCSVLine(line);
+        const obj = {}; headers.forEach((h,i) => obj[h] = parts[i] || '');
+        return obj;
+      });
+    }
+    function parseCSVLine(line){
+      const res = []; let cur = ''; let inQ = false;
+      for(let i=0;i<line.length;i++){
+        const ch = line[i];
+        if(ch === '"' && line[i+1] === '"'){ cur += '"'; i++; continue; }
+        if(ch === '"'){ inQ = !inQ; continue; }
+        if(ch === ',' && !inQ){ res.push(cur); cur = ''; continue; }
+        cur += ch;
+      }
+      res.push(cur);
+      return res.map(s => s.trim());
+    }
+
+    const csvDrop = $('#csvDrop');
+    $('#csvSelect').addEventListener('click', ()=> $('#csvFile').click());
+    $('#csvFile').addEventListener('change', async (e)=> {
+      const f = e.target.files[0]; if(!f) return;
+      const txt = await f.text(); csvDrop.dataset.raw = txt; csvDrop.classList.add('border-success');
+    });
+    csvDrop.addEventListener('dragover', e => { e.preventDefault(); csvDrop.classList.add('border-primary'); });
+    csvDrop.addEventListener('dragleave', () => csvDrop.classList.remove('border-primary'));
+    csvDrop.addEventListener('drop', async (e) => {
+      e.preventDefault(); csvDrop.classList.remove('border-primary');
+      const f = e.dataTransfer.files[0]; if(!f) return;
+      const txt = await f.text(); csvDrop.dataset.raw = txt; csvDrop.classList.add('border-success');
+    });
+
+    $('#processCsv').addEventListener('click', ()=> {
+      const raw = csvDrop.dataset.raw; if(!raw) return alert('No CSV loaded.');
+      const arr = csvToJSON(raw);
+      arr.forEach(row => {
+        const entry = { id: row.id || uid(), name: row.name || 'Unknown', age: Number(row.age) || 0, disease: row.disease || '', room: row.room || '', notes: row.notes || '', photo: row.photo || '', added: todayISO() };
+        const idx = patients.findIndex(p => p.id === entry.id);
+        if(idx >= 0) patients[idx] = entry; else patients.push(entry);
+      });
+      saveStore(patients); csvDrop.dataset.raw = ''; csvDrop.classList.remove('border-success');
+      renderPatients(); renderDashboard(); alert('CSV imported: ' + arr.length + ' rows');
+    });
+
+    // Export / Import JSON & CSV
+    function download(filename, text, mime='application/json'){
+      const blob = new Blob([text], { type: mime });
+      const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = filename; a.click();
+      setTimeout(()=> URL.revokeObjectURL(a.href), 3000);
+    }
+
+    $('#exportJsonBtn').addEventListener('click', ()=> download('patients.json', JSON.stringify(patients, null, 2)));
+    $('#exportCsvBtn').addEventListener('click', ()=> {
+      if(!patients.length) return alert('No data to export');
+      const keys = ['id','name','age','disease','room','notes','photo','added'];
+      const rows = [keys.join(',')].concat(patients.map(b => keys.map(k => '"' + (String(b[k] || '')).replace(/"/g,'""') + '"').join(',')));
+      download('patients.csv', rows.join('\n'), 'text/csv');
+    });
+
+    $('#importBtn').addEventListener('click', ()=> $('#importFile').click());
+    $('#importFile').addEventListener('change', async (e) => {
+      const f = e.target.files[0]; if(!f) return;
+      const txt = await f.text();
+      if(f.name.toLowerCase().endsWith('.json')){
+        try{ const data = JSON.parse(txt); if(Array.isArray(data)){ patients = data; saveStore(patients); renderPatients(); renderDashboard(); alert('JSON imported'); } else throw 'invalid'; } catch { alert('Invalid JSON'); }
+      } else if(f.name.toLowerCase().endsWith('.csv')){
+        const arr = csvToJSON(txt);
+        arr.forEach(row => {
+          const entry = { id: row.id || uid(), name: row.name || 'Unknown', age: Number(row.age) || 0, disease: row.disease || '', room: row.room || '', notes: row.notes || '', photo: row.photo || '', added: todayISO() };
+          const idx = patients.findIndex(p => p.id === entry.id);
+          if(idx >= 0) patients[idx] = entry; else patients.push(entry);
+        });
+        saveStore(patients); renderPatients(); renderDashboard(); alert('CSV imported: ' + arr.length + ' rows');
+      } else { alert('Unsupported file type'); }
+      e.target.value = '';
+    });
+
+    // interactions
+    $('#globalSearch').addEventListener('input', e => { lastSearch = e.target.value; renderPatients(1); });
+    $('#applyFilters').addEventListener('click', () => renderPatients(1));
+    $('#resetFilters').addEventListener('click', () => { $('#filterDisease').value=''; $('#filterMinAge').value=''; $('#filterRoom').value=''; renderPatients(1); });
+    $('#filterDisease').addEventListener('input', () => renderPatients(1));
+    $('#filterMinAge').addEventListener('input', () => renderPatients(1));
+    $('#filterRoom').addEventListener('input', () => renderPatients(1));
+    $('#clearAllBtn').addEventListener('click', () => { if(confirm('Clear ALL patients? This cannot be undone.')){ patients = []; saveStore(patients); renderPatients(); renderDashboard(); alert('Cleared'); } });
+    $('#printListBtn').addEventListener('click', () => { showView('print'); setTimeout(()=> window.print(), 300); });
+    $('#printNowBtn').addEventListener('click', () => window.print());
+
+    // initial render
+    function init(){ showView('dashboard'); renderPatients(1); renderDashboard(); }
+    init();
+
+  })();
+  </script>
+</body>
+</html>
